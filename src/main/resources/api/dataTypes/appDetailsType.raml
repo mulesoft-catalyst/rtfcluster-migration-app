@@ -1,0 +1,89 @@
+#%RAML 1.0 DataType
+type: object
+properties:
+  targetAppName:
+    type: string
+    minLength: 3
+    maxLength: 42
+    description: |
+      Deployed application name 
+
+  appReference:
+    type: object
+    properties:
+      groupId: string
+      artifactId: string
+      version: string
+    description: |
+      GAV of the application WRT anypoint exchange
+
+  replicas:
+    type: number
+    minimum: 1
+    description: |
+      Number of replicas in RTF
+
+  targetId:
+    type: string
+    description: |
+      Deployment target
+
+  lastMileSecurity:
+    type: boolean
+    description: |
+      Flag if the last mile security is tobe enabled
+  
+  appProps?:
+    type: array
+    items: !include appPropType.raml
+    description: |
+      Application properties in KV format
+
+  runtimeVersion: 
+    type: string
+    description: |
+      Muleruntime version and image tag
+    example: "4.2.1:v1.2.9"
+
+  publicURL:
+    type: string
+    description: |
+      Public URL of the app
+
+  appCPU:
+    type: !include appResource.raml
+    description: |
+      Allocated CPU for the App
+    example:
+      {
+        "reserved": "500m",
+        "limit": "500m"
+      }
+  
+  appMemory:
+    type: !include appResource.raml
+    description: |
+      Allocated memory for the App
+    example:
+      {
+        "reserved": "700Mi",
+        "limit": "700Mi"
+      }
+  
+  desiredState:
+    type: string
+    enum: ["STARTED", "STOPPED"]
+    description: |
+      target state of the app after deployment
+
+  updateStrategy:
+    type: string
+    enum: ["rolling", "recreate"]
+    description: |
+      Application update strategy
+      
+
+      
+  
+
+        

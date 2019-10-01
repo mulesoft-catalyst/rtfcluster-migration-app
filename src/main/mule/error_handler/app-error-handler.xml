@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<error-handler name="app-error-handler" doc:id="55da56ed-976f-4b24-9a6a-a12c3f5e50ba" >
+		<on-error-continue enableNotifications="true" logException="false" doc:name="On Error Continue" doc:id="79c2fbe5-5fca-4b54-a5d2-da4e321c0159" type="APP:ENV_NOT_FOUND">
+			<logger level="INFO" doc:name="Logger" doc:id="fc8b5bd8-77c6-4b51-862a-a5fae3cd00fa" message="Environment is not available for the user"/>
+			<ee:transform doc:name="Output payload" doc:id="915f529e-a42c-433c-8bc0-3301c3fbd62e" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Failure",
+	erroMsg: "One or more environment not found for the user"
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-continue>
+	</error-handler>
+</mule>

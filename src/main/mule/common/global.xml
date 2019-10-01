@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="7b47aedd-e450-40a9-8a62-134bd9b769de" file="properties/${mule.env}.yaml" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="56349da1-5df1-4bc8-8c7a-8f9c0930deb1" >
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="545c945b-c52f-4fcc-b323-d2754f0a6292" file="properties/${mule.env}.yaml" key="${enc.key}" />
+	<vm:config name="VM_Config_appList" doc:name="VM Config" doc:id="d4c4315d-09a3-4584-b8a4-e45f1d804769" >
+		<vm:queues >
+			<vm:queue queueName="appListQueue" queueType="PERSISTENT" maxOutstandingMessages="100" />
+		</vm:queues>
+	</vm:config>
+	<apikit:config outboundHeadersMapName="outboundHeadersMapName" httpStatusVarName="httpStatus" doc:name="Router" doc:id="7790b8fa-a8ff-4805-a3e0-5dcf896d1869" name="migration-app-config" raml="api/migration-app.raml" />
+</mule>

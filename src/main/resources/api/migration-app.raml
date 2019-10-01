@@ -1,0 +1,68 @@
+#%RAML 1.0
+title: hybrid-bulk-deploy
+mediaType: [application/json]
+
+types:
+  appDetails: !include dataTypes/appDetailsType.raml
+  rftMigrationDetails: !include dataTypes/rtfMigrationDetails.raml
+  queueMigrationDetails: !include dataTypes/queueMigrationDetails.raml
+  alertType: !include dataTypes/alertType.raml
+  
+    
+  
+traits:
+  commonHeaders: !include traits/commonHeaders.raml
+  
+
+/rtf/deploy:
+  post:
+    is: [commonHeaders]
+    body:
+      application/json:
+        type: appDetails[]
+        example: !include examples/deploy-post-input.json
+          
+    responses:
+      202:
+        body:
+          application/json:
+            
+
+/migrate/rtf:
+  post:
+    is: [commonHeaders]
+    body:
+      application/json:
+        type: rftMigrationDetails
+        
+          
+    responses:
+      202:
+        body:
+          application/json:
+
+/migrate/queue:
+  post:
+    is: [commonHeaders]
+    body:
+      application/json:
+        type: queueMigrationDetails
+    responses:
+      202:
+        body:
+          application/json:
+
+/migration/alerts:
+  post:
+    is: [commonHeaders]
+    body:
+      type: alertType
+    responses:
+      202:
+        body:
+          application/json:
+            
+
+            
+            
+

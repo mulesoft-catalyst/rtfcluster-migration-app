@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<sub-flow name="deploy-all-app-subflow" doc:id="f263e653-4c99-4e1f-a64d-5f66e1db0d13" >
+		<foreach doc:name="For Each" doc:id="081db2d3-e198-4a98-b012-bd77b317632b" collection="payload">
+			<try doc:name="Try" doc:id="047354e1-5f26-41b5-8fd1-6bb81a1ee413">
+				<http:request method="POST" doc:name="Deploy APP" doc:id="22f509e9-e319-4d8c-9c22-fa204c3a5f96" url="${anypoint.deploymentPath}">
+					<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.envId,
+	"X-ANYPNT-ORG-ID" : vars.orgId,
+	"Authorization" : vars.accessToken
+}]]]></http:headers>
+					<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.orgId,
+	"envid" : vars.envId
+}]]]></http:uri-params>
+				</http:request>
+				<error-handler>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="47ff57d8-7c5a-45ef-9a30-9108dc1d6fb9">
+						<logger level="INFO" doc:name="Logger" doc:id="f968bf09-6cc8-4607-ad4e-2ceda2898101" message="Some Error occured" />
+						<ee:transform doc:name="Set variables" doc:id="76f6e3fd-a2a5-4068-b29e-c0c2ed5ff2b4">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="deploymentResultList"><![CDATA[output application/java
+---
+vars.deploymentResultList ++ [{
+	"status": "Failure",
+	"errorMsg": error
+}]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+					</on-error-continue>
+				</error-handler>
+			</try>
+			<ee:transform doc:name="Set variables" doc:id="fc24af52-ed4a-41da-bc07-db2ea0157a2c">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="deploymentResultList"><![CDATA[output application/java
+---
+vars.deploymentResultList ++ [{
+	"status": "Success",
+	"serverMsg": payload
+}]]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+	</sub-flow>
+	<sub-flow name="get-app-list-subflow" doc:id="a7cf1deb-ad58-486e-9cc2-9d09d635cd67" >
+		<http:request method="GET" doc:name="Get app list" doc:id="f03c52c6-8b84-4cd2-8e73-be8f79a499a0" url="${anypoint.listAppPath}">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.sourceEnvId,
+	"X-ANYPNT-ORG-ID" : vars.orgId,
+	"Authorization" : vars.accessToken
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.orgId,
+	"envid" : vars.sourceEnvId
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="FIlter applist by source RTF" doc:id="c6d4847e-b9db-44f9-838d-9119bd7acc8e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.items filter($.target.targetId == vars.sourceRTF and $.application.status == "RUNNING") map((appItem, appItemIdx) -> {
+	appId: appItem.id,
+	appName: appItem.name,
+	appStatus: appItem.application.status
+})]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="setup-variables" doc:id="dba6ad47-0f84-401b-ad81-0cd60158d1a0" >
+		<http:request method="GET" doc:name="GET API Profile" doc:id="8b3fb202-cc84-418d-9575-30cdb140df31" url="${anypoint.apiProfilePath}">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : p('anypoint.source.envId'),
+	"X-ANYPNT-ORG-ID" : p('anypoint.source.orgId'),
+	"Authorization" : vars.accessToken
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : p('anypoint.source.orgId'),
+	"envid" : p('anypoint.source.envId')
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Setup environment vars" doc:id="1ba1e743-ba43-430d-8029-b51f1277e08f">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="orgId"><![CDATA[payload.organization.id]]></ee:set-variable>
+				<ee:set-variable variableName="orgName"><![CDATA[payload.organization.name]]></ee:set-variable>
+				<ee:set-variable variableName="envList"><![CDATA[output application/json
+---
+payload.organization.environments map((env, envIdx) -> {
+	(env.name): env.id
+}) reduce($$ ++ $)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="get-access-token-subflow" doc:id="87daff08-bca2-42b5-8ab6-608c17f1ef38" >
+		<logger level="INFO" doc:name="Start Get token" doc:id="952f310b-c09b-4828-ae06-285a27481901" message="Logging into Anypoint for token" />
+		<ee:transform doc:name="Transform Message" doc:id="ffb18b27-725b-4c10-be25-28cbfb733da2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+   "username" : p('anypoint.user.name'),
+   "password" : p('anypoint.user.pass')
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Get Anypoint access token" doc:id="81c51e6d-5ea4-4723-9f61-f7e2ea75e8ed" url="https://anypoint.mulesoft.com/accounts/login" sendCorrelationId="ALWAYS">
+		</http:request>
+	</sub-flow>
+	<flow name="application-bulk-deployFlow" doc:id="ba37dda3-024d-4b37-9668-fc1baaf4296a" >
+		<http:listener doc:name="Listener" doc:id="b4758964-bfdd-472a-9187-e732ca95db2a" config-ref="HTTP_Listener_config" path="${http.path}"/>
+		<ee:transform doc:name="originalPayload" doc:id="6699cf97-5123-4b62-be2b-1b84b0af540a" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="originalPayload" ><![CDATA[payload]]></ee:set-variable>
+				<ee:set-variable variableName="envName" ><![CDATA[attributes.headers."anypoint-env"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="get-access-token-subflow" doc:id="e6cc67c8-000c-4828-94ab-81f46878f0bb" name="get-access-token-subflow" target="accessToken" targetValue='#["Bearer " ++ payload.access_token]'/>
+		<flow-ref doc:name="setup-variables" doc:id="3ab9aed0-ad9e-40a3-b9f8-a139acf70cec" name="setup-variables"/>
+		<logger level="INFO" doc:name="Logger" doc:id="e3409ac2-b6b4-4cb6-bf9c-6560fba40cb3" message='#[output application/json
+---
+{
+	"variables": vars
+}]' />
+		<try doc:name="Try" doc:id="e3cdad5a-f734-4f94-91c0-3922d0286018" >
+			<ee:transform doc:name="Converting app deploy data" doc:id="fca8e4b4-e9ac-4670-a576-c391ae07dbe5">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.originalPayload map ( payload01 , indexOfPayload01 ) -> {
+	name: payload01.targetAppName,
+	target: {
+		provider: "MC",
+		targetId: payload01.targetId,
+		deploymentSettings: {
+			resources: {
+				cpu: {
+					reserved: payload01.appCPU.reserved,
+					limit: payload01.appCPU.limit
+				},
+				memory: {
+					reserved: payload01.appMemory.reserved,
+					limit: payload01.appMemory.limit
+				}
+			},
+			clustered: false,
+			http: {
+				inbound: {
+					publicUrl: payload01.publicURL
+				}
+			},
+			runtimeVersion: payload01.runtimeVersion,
+			lastMileSecurity: payload01.lastMileSecurity,
+			updateStrategy: payload01.updateStrategy
+		},
+		replicas: payload01.replicas
+	},
+	application: {
+		ref: {
+			groupId: payload01.appReference.groupId,
+			artifactId: payload01.appReference.artifactId,
+			version: payload01.appReference.version,
+			packaging: "jar"
+		},
+		assets: [],
+		desiredState: payload01.desiredState,
+		configuration: {
+			"mule.agent.application.properties.service": {
+				applicationName: payload01.targetAppName,
+				properties: (payload01.appProps map ((props, propsIDX) -> {
+					(props.key): props.value
+				})) reduce($$ ++ $)
+			}
+		}
+	}
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="deploymentResultList"><![CDATA[[]]]></ee:set-variable>
+					<ee:set-variable variableName="envId" ><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+fun getEnv(data) = if(vars.envList[data] == null)
+						fail(data ++ " Environment is not available")
+				   else
+				   		vars.envList[data]
+
+---
+getEnv(vars.envName)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="541b8b62-ee97-4783-975a-1fb002861581" >
+					<raise-error doc:name="Raise error" doc:id="38bffc54-b54d-49cd-85f9-8da76364529e" type="APP:ENV_NOT_FOUND"/>
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<flow-ref doc:name="deploy-all-app-subflow" doc:id="7c359bac-2886-46db-93c9-302a891e30ab" name="deploy-all-app-subflow" />
+		<set-payload value="#[output application/json
+---
+vars.deploymentResultList]" doc:name="Set Payload" doc:id="68fc9fe2-86c2-4224-82e1-9a0a8160d23e" />
+		<logger level="INFO" doc:name="Logger" doc:id="b8ec1679-da90-4c8c-83ef-20807b34cae0" message="#[payload]"/>
+		<error-handler ref="app-error-handler"/>
+	</flow>
+	<flow name="rtf-migrate-flow" doc:id="e74cdfb5-0a20-4e71-9c97-680931bdb3f4" >
+		<ee:transform doc:name="Setting variables(6)" doc:id="22d5fe87-72fc-47f6-a8f4-b6910d2ed68f" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="originalPayload" ><![CDATA[payload]]></ee:set-variable>
+				<ee:set-variable variableName="sourceRTF" ><![CDATA[payload.sourceRTF]]></ee:set-variable>
+				<ee:set-variable variableName="destRTF" ><![CDATA[payload.targetRTF]]></ee:set-variable>
+				<ee:set-variable variableName="sourceEnvName" ><![CDATA[attributes.headers."anypoint-env-source"]]></ee:set-variable>
+				<ee:set-variable variableName="destEnvName" ><![CDATA[if (attributes.headers."anypoint-env-target" == null)
+	attributes.headers."anypoint-env-source"
+else
+	attributes.headers."anypoint-env-target"]]></ee:set-variable>
+				<ee:set-variable variableName="renameApps" ><![CDATA[payload.renameApps]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="get-access-token-subflow" doc:id="0bfe12f1-0307-4b2f-8273-cbfc9f3b1acd" name="get-access-token-subflow" target="accessToken" targetValue='#["Bearer " ++ payload.access_token]'/>
+		<flow-ref doc:name="setup-variables" doc:id="976b437d-0b79-4e3e-bb28-794f1a4eb2a2" name="setup-variables"/>
+		<ee:transform doc:name="Get EnvID" doc:id="066a2e29-d11c-4008-894d-7ca73bb3d67b" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="sourceEnvId" ><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+fun getEnv(data) = if(vars.envList[data] == null)
+						fail(data ++ " Environment is not available")
+				   else
+				   		vars.envList[data]
+
+---
+getEnv(vars.sourceEnvName)]]></ee:set-variable>
+				<ee:set-variable variableName="targetEnvId" ><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+fun getEnv(data) = if(vars.envList[data] == null)
+						fail(data ++ " Environment is not available")
+				   else
+				   		vars.envList[data]
+
+---
+getEnv(vars.destEnvName)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="get-app-list-subflow" doc:id="63681613-eab9-4a45-84f0-b160c434c819" name="get-app-list-subflow" />
+		<choice doc:name="Choice" doc:id="30d6f5b2-10fb-4a02-a8f0-c003501a7568" >
+			<when expression="#[sizeOf(payload) == 0]">
+				<raise-error doc:name="APP:NOT_FOUND" doc:id="5327415a-2c2a-4e38-8ecc-7355de8ecefd" type="APP:NOT_FOUND" description="No application found in source environment"/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Setting Queue Payload" doc:id="33d3bc01-b878-448a-8a19-abcfe9028283">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	appList: payload,
+	orgId: vars.orgId,
+	sourceEnv: vars.sourceEnvId,
+	targetEnv: vars.targetEnvId,
+	sourceRTF: vars.sourceRTF,
+	targetRTF: vars.destRTF,
+	accessToken: vars.accessToken,
+	desiredStatus: vars.originalPayload.desiredStatus
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<vm:publish doc:name="Publish" doc:id="6a32654c-0ee8-4c18-b641-ff36c1ce0ee9" config-ref="VM_Config_appList" queueName="appListQueue" timeout="3600"/>
+				<ee:transform doc:name="Output Payload" doc:id="e1e7f965-c2ac-473c-8028-39b7d9173296" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Migration request submitted successfully"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>

@@ -1,0 +1,33 @@
+#%RAML 1.0 DataType
+type: object
+properties:
+  sourceRTF:
+    type: string
+    description: |
+      Source RTF environment
+
+  targetRTF:
+    type: string
+    description: |
+      Target RTF Environment
+  
+  desiredStatus:
+    type: string
+    enum: ["STOPPED", "DELETED"]
+    description: |
+      Desired status of the applications in source RTF
+
+  renameApps?:
+    type: boolean
+    description: |
+      If application should be renamed in the target env
+
+  sourceNamePattern?:
+    type: string
+    description: |
+      String in the source application name name which needs to be renamed
+
+  targetNamePattern?:
+    type: string
+    description: |
+      Target name placeholder

@@ -1,0 +1,35 @@
+#%RAML 1.0 DataType
+type: object
+properties:
+  
+  deleteSourceQueue:
+    type: boolean
+    description: |
+      If queues in Source environment should be deleted
+
+  renameQueueatTarget:
+    type: boolean
+    description: |
+      If the queue names should be renamed at the target enviroment
+  
+  sourceNamePattern?:
+    type: string
+    description: |
+      Source queue Name pattern which should be replaced in target environment
+  
+  targetNamePattern?:
+    type: string
+    description: |
+      Target name pattern
+
+  skipTestQueues:
+    type: boolean
+    description: |
+      If test queues in source environment should be skipped
+  
+  testQueueNamePattern?:
+    type: string
+    description: |
+      Test queue name pattern (Case sensetive)
+
+  

@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	<sub-flow name="removing-app-from-sourcertf-subflow" doc:id="e237f4c9-81a6-4d87-9555-78df6902aca9" >
+		<foreach doc:name="For Each entry in vars.originalPayload.appList" doc:id="8be1cf0a-d8c5-4f3c-8312-14a142a1c53e" collection="vars.originalPayload.appList">
+			<set-variable value="#[payload.appId]" doc:name="Set Variable" doc:id="c7e28c19-55dc-4616-b3c9-4329718d3597" variableName="appId"/>
+			<try doc:name="Try" doc:id="03d75acf-b5fc-4d28-b74c-27c5b5a97267">
+				<http:request method="GET" doc:name="Get App details" doc:id="11e03d59-32d0-4ebc-8cd5-493f2adef616" url="${anypoint.appDetailsPath}">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.originalPayload.sourceEnv,
+	"X-ANYPNT-ORG-ID" : vars.originalPayload.orgId,
+	"Authorization" : vars.originalPayload.accessToken
+}]]]></http:headers>
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.originalPayload.orgId,
+	"envid" : vars.originalPayload.sourceEnv,
+	"appid" : payload.appId
+}]]]></http:uri-params>
+					
+			</http:request>
+				<ee:transform doc:name="Transform Message" doc:id="06e6a472-8755-4323-ae42-1d895aaef324">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="appDetails"><![CDATA[%dw 2.0
+output application/json
+---
+vars.appDetails ++ [{
+	name: payload.name,
+	target: {
+		provider: payload.target.provider,
+		targetId: vars.originalPayload.targetRTF,
+		deploymentSettings: {
+			resources: {
+				cpu: {
+					reserved: payload.target.deploymentSettings.resources.cpu.reserved,
+					limit: payload.target.deploymentSettings.resources.cpu.limit
+				},
+				memory: {
+					reserved: payload.target.deploymentSettings.resources.memory.reserved,
+					limit: payload.target.deploymentSettings.resources.memory.limit
+				}
+			},
+			clustered: payload.target.deploymentSettings.clustered,
+			http: {
+				inbound: {
+					publicUrl: payload.target.deploymentSettings.http.inbound.publicUrl
+				}
+			},
+			runtimeVersion: payload.target.deploymentSettings.runtimeVersion,
+			lastMileSecurity: payload.target.deploymentSettings.lastMileSecurity,
+			updateStrategy: payload.target.deploymentSettings.updateStrategy
+		},
+		replicas: payload.target.replicas
+	},
+	application: {
+		ref: {
+			groupId: payload.application.ref.groupId,
+			artifactId: payload.application.ref.artifactId,
+			version: payload.application.ref.version,
+			packaging: payload.application.ref.packaging
+		},
+		assets: [],
+		desiredState: payload.application.desiredState,
+		configuration: {
+			"mule.agent.application.properties.service": {
+				applicationName: payload.application.configuration."mule.agent.application.properties.service".applicationName,
+				properties: payload.application.configuration."mule.agent.application.properties.service".properties
+			}
+		}
+	}
+}]]]></ee:set-variable>
+					<ee:set-variable variableName="appDetailsResult"><![CDATA[%dw 2.0
+output application/json
+---
+vars.appDetailsResult ++ [{
+	message: "Successfully stopped app details",
+	appName: payload.name,
+	status: "SUCCESS"
+}]]]></ee:set-variable>
+						<ee:set-variable variableName="desiredState" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "application": {
+    "desiredState": "STOPPED"
+  }
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="0f8f9b98-bdb1-4d9c-a89f-188e87be1a2a" message="Stopping App #[payload.name]" />
+				<choice doc:name="Choice" doc:id="5c833aa3-110c-482b-bd61-be8389e53770" >
+					<when expression='#[vars.originalPayload.desiredStatus == "STOPPED"]'>
+						<http:request method="PATCH" doc:name="Stop app" doc:id="9dbfe74f-864c-4aee-ab24-23075fbdbdd5" url="${anypoint.appDetailsPath}">
+							<http:body ><![CDATA[#[vars.desiredState]]]></http:body>
+							<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.originalPayload.sourceEnv,
+	"X-ANYPNT-ORG-ID" : vars.originalPayload.orgId,
+	"Authorization" : vars.originalPayload.accessToken
+}]]]></http:headers>
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.originalPayload.orgId,
+	"envid" : vars.originalPayload.sourceEnv,
+	"appid" : vars.appId
+}]]]></http:uri-params>
+						</http:request>
+					</when>
+					<otherwise >
+						<http:request method="DELETE" doc:name="Detele app" doc:id="8ec9f660-0371-4e0f-a22c-fea0727d8ef8" url="${anypoint.appDetailsPath}">
+							<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.originalPayload.sourceEnv,
+	"X-ANYPNT-ORG-ID" : vars.originalPayload.orgId,
+	"Authorization" : vars.originalPayload.accessToken
+}]]]></http:headers>
+				<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.originalPayload.orgId,
+	"envid" : vars.originalPayload.sourceEnv,
+	"appid" : vars.appId
+}]]]></http:uri-params>
+						</http:request>
+					</otherwise>
+				</choice>
+				<error-handler>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="2eed52d0-8628-4282-87e5-12beec5c4cdc">
+						<logger level="INFO" doc:name="Logger" doc:id="c0033624-47ee-4f4b-8869-36c1b48818db" message="Error occured during app details get for - #[payload.appName]" />
+						<ee:transform doc:name="Transform Message" doc:id="5b1ef2d3-a23e-4838-8efb-9e3c686f0d0c">
+							<ee:message>
+							</ee:message>
+							<ee:variables>
+								<ee:set-variable variableName="appDetailsResult"><![CDATA[%dw 2.0
+output application/json
+---
+vars.appDetailsResult ++ [{
+	message: "Failed to get details or stop app",
+	appName: payload.appName,
+	status: "FAILURE"
+}]]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+	</sub-flow>
+	<sub-flow name="check-source-app-status-subflow" doc:id="ab181fdf-c401-45d7-9483-5d6794d67a82" >
+		<flow-ref doc:name="get-app-list-subflow" doc:id="fd26cbbd-10f1-4a98-9c05-23f294058928" name="get-app-list-subflow"/>
+		<choice doc:name="Choice" doc:id="9d652212-c90f-45fe-aebe-65c0248a1b68" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<scripting:execute engine="groovy" doc:name="Sleep" doc:id="80237d4d-3fd3-48ce-a8df-b76641e13508" >
+					<scripting:code >java.lang.Thread.sleep(30000)</scripting:code>
+				</scripting:execute>
+				<flow-ref doc:name="check-source-app-status-subflow" doc:id="d1fc0461-e15f-42b6-b9d3-36a3824f4487" name="check-source-app-status-subflow"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="84e73d1f-c477-441f-9a3c-0fc6c092e2c4" message="All apps are removed from Source RTF"/>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<flow name="implementation_asyncFlow" doc:id="a75e135b-7866-4865-bda7-dc42fb617321" >
+		<vm:listener doc:name="Listener" doc:id="3de07d84-6442-4e53-bb54-02968a3069c8" config-ref="VM_Config_appList" queueName="appListQueue"/>
+		<ee:transform doc:name="originalPayload" doc:id="e2f4263c-7c97-4649-909f-073130ba4c57" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="originalPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+				<ee:set-variable variableName="appDetails" ><![CDATA[[]]]></ee:set-variable>
+				<ee:set-variable variableName="appDetailsResult" ><![CDATA[[]]]></ee:set-variable>
+				<ee:set-variable variableName="appStopResult" ><![CDATA[[]]]></ee:set-variable>
+				<ee:set-variable variableName="sourceEnvId" ><![CDATA[payload.sourceEnv]]></ee:set-variable>
+				<ee:set-variable variableName="orgId" ><![CDATA[payload.orgId]]></ee:set-variable>
+				<ee:set-variable variableName="sourceRTF" ><![CDATA[payload.sourceRTF]]></ee:set-variable>
+				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
+				<ee:set-variable variableName="deploymentResultList" ><![CDATA[[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="46611b3f-f1e0-4952-9148-fa9c9f8974e9" message="Stopping all the apps in #[vars.originalPayload.sourceRTF]"/>
+		<flow-ref doc:name="removing-app-from-sourcertf-subflow" doc:id="92a73e73-804b-4b83-acda-103e8fbdd4c1" name="removing-app-from-sourcertf-subflow" />
+		<flow-ref doc:name="check-sourcertf-app-status-subflow" doc:id="642a9f78-c24c-43e9-a55f-3739c825a4bb" name="check-source-app-status-subflow"/>
+		<ee:transform doc:name="Transform Message" doc:id="3215abae-e8fb-42ba-ae76-333639713e01" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[vars.appDetails]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="envId" ><![CDATA[vars.sourceEnvId]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="deploy-all-app-subflow" doc:id="6783c188-5db8-4cc9-8bfe-24a14c9668cb" name="deploy-all-app-subflow"/>
+		<logger level="INFO" doc:name="Logger" doc:id="9d0db8f5-a034-4018-a46e-419abdda60e9" message="Migration complete"/>
+	</flow>
+</mule>

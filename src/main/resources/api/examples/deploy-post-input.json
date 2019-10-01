@@ -1,0 +1,76 @@
+[
+  {
+    "targetAppName": "testhelloworldapp",
+    "appReference": {
+      "groupId": "b0ece5a9-9105-463f-a750-04fdb531fa74",
+      "artifactId": "helloworldimpl-mule-application-1.0.0-mule-application",
+      "version": "1.0.0"
+    },
+    "replicas": 1,
+    "appProps": [
+      {
+        "key": "mule.env",
+        "value": "dev"
+      },
+      {
+        "key": "anypoint.platform.client_id",
+        "value": "XXXX"
+      },
+      {
+        "key": "anypoint.platform.client_secret",
+        "value": "YYYY"
+      }
+    ],
+    "targetId": "a5c733ac-747f-4f32-bd6e-a9ebf2adf92b",
+    "runtimeVersion": "4.2.1:v1.2.9",
+    "publicURL": "https://helloworldtestapp.handsonlab.pro",
+    "lastMileSecurity": false,
+    "appCPU": {
+      "reserved": "700m",
+      "limit": "1000m"
+    },
+    "appMemory": {
+      "reserved": "1000Mi",
+      "limit": "1500Mi"
+    },
+    "desiredState": "STARTED",
+    "updateStrategy": "rolling" 
+  },
+  {
+    "targetAppName": "https_test-frmapp",
+    "appReference": {
+      "groupId": "b0ece5a9-9105-463f-a750-04fdb531fa74",
+      "artifactId": "https_test",
+      "version": "1.0.6"
+    },
+    "replicas": 1,
+    "appProps": [
+      {
+        "key": "mule.env",
+        "value": "dev"
+      },
+      {
+        "key": "anypoint.platform.client_id",
+        "value": "XXXX"
+      },
+      {
+        "key": "anypoint.platform.client_secret",
+        "value": "YYYY"
+      }
+    ],
+    "targetId": "a5c733ac-747f-4f32-bd6e-a9ebf2adf92b",
+    "runtimeVersion": "4.2.1:v1.2.9",
+    "publicURL": "https://https-test.handsonlab.pro",
+    "lastMileSecurity": false,
+    "appCPU": {
+      "reserved": "700m",
+      "limit": "1000m"
+    },
+    "appMemory": {
+      "reserved": "1000Mi",
+      "limit": "1500Mi"
+    },
+    "desiredState": "STARTED",
+    "updateStrategy": "rolling" 
+  }
+]
