@@ -13,9 +13,11 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 		<set-variable value="#[vars.targetEnvId]" doc:name="Set target env" doc:id="5b44b2cb-ae59-4d60-8a57-2f27c1319cc6" variableName="env"/>
 		<flow-ref doc:name="get-q-list-subflow" doc:id="60ec33e9-a953-4b0f-89d7-1317996fc999" name="get-q-list-subflow" target="targetQList" targetValue="#[payload]"/>
 		<flow-ref doc:name="prepare-migration-data" doc:id="a719b6a0-8a02-4067-9791-a10bcdb338d3" name="prepare-migration-data"/>
-		<ee:transform doc:name="Transform Message" doc:id="757469d8-024a-4c75-92b3-cdbbf86ad0c2" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<choice doc:name="Choice" doc:id="adc0d610-15c9-48f0-8210-c526ec836410" >
+			<when expression="#[sizeOf(vars.finalTargetQNames) &gt; 0]">
+				<ee:transform doc:name="Transform Message" doc:id="757469d8-024a-4c75-92b3-cdbbf86ad0c2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -23,8 +25,8 @@ output application/json
 	messgae: "Migration request submitted successfully"
 }]]></ee:set-payload>
 			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="payloadForQueue" ><![CDATA[%dw 2.0
+			<ee:variables>
+				<ee:set-variable variableName="payloadForQueue"><![CDATA[%dw 2.0
 output application/json
 
 
@@ -45,9 +47,26 @@ fun getQueuesWithDLQ(data) = data filter($.deadLetterQueueId != null)
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<vm:publish doc:name="Publish" doc:id="3e4cdc00-77c9-4b7e-b138-4ee071515a2d" config-ref="VM_Config_appList" queueName="queueListQueue">
-			<vm:content ><![CDATA[#[vars.payloadForQueue]]]></vm:content>
+				<vm:publish doc:name="Publish" doc:id="3e4cdc00-77c9-4b7e-b138-4ee071515a2d" config-ref="VM_Config_appList" queueName="queueListQueue">
+			<vm:content><![CDATA[#[vars.payloadForQueue]]]></vm:content>
+					<vm:content ><![CDATA[#[vars.payloadForQueue]]]></vm:content>
 		</vm:publish>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="bca44a17-fe2b-4e72-9109-c7b08ade73f2" message="Empty target queue list"/>
+				<ee:transform doc:name="Transform Message" doc:id="fd92a456-8e6a-49a0-b1d0-924c1203152c" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "SUCCESS",
+	message: "No AMQ to migrate"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
 	</flow>
 	
 	
