@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+
+		<flow name="migrate-queues-subflow" doc:id="ff57cb00-65d1-4a72-a972-48578fb1acfe" >
+		<vm:listener queueName="queueListQueue" doc:name="Listener" doc:id="97fc60b7-4ff8-419b-909a-8a7c91e7664a" config-ref="VM_Config_appList"/>
+		<ee:transform doc:name="Setting variables" doc:id="561db4d5-02fe-45cb-aa5b-b99c47062df8" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="orgId" ><![CDATA[payload.orgId]]></ee:set-variable>
+				<ee:set-variable variableName="finalTargetQNames" ><![CDATA[payload.finalTargetQNames]]></ee:set-variable>
+				<ee:set-variable variableName="targetQList" ><![CDATA[payload.targetQList]]></ee:set-variable>
+				<ee:set-variable variableName="region" ><![CDATA[payload.region]]></ee:set-variable>
+				<ee:set-variable variableName="env" ><![CDATA[payload.env]]></ee:set-variable>
+				<ee:set-variable variableName="originalPayload" ><![CDATA[payload]]></ee:set-variable>
+				<ee:set-variable variableName="cleanTarget" ><![CDATA[payload.cleanTarget]]></ee:set-variable>
+				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="3a0c6dec-7c20-498e-8b9f-1ea6293af320" >
+			<when expression='vars.cleanTarget == true'>
+				<logger level="INFO" doc:name="Logger" doc:id="a5cb57ae-c575-430e-a4da-a4f22a4fe179" message="Deleting queues from target"/>
+				<foreach doc:name="For Each" doc:id="58ef9101-325f-44d5-9d6d-b4a6c196307e" collection="vars.targetQList">
+					<try doc:name="Try" doc:id="fd98b726-44a0-4ff2-af01-8a78e828c743" >
+						<http:request method="DELETE" doc:name="Deleteing Queues from target" doc:id="8db61614-45e0-4035-bb48-5114aa7f3d31" url="${anypoint.amqOpURL}">
+						<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.accessToken
+}]]]></http:headers>
+						<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.orgId,
+	"envid" : vars.env,
+	"region" : vars.region,
+	"qid" : payload.queueId
+}]]]></http:uri-params>
+				</http:request>
+						<logger level="INFO" doc:name="Logger" doc:id="3509afa2-abff-46ab-b443-6ffa438d8ed8" message="Queue deleted"/>
+						<error-handler >
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="4cb5060d-f36c-4998-8e8d-a31cb6f6b4b1" >
+								<logger level="INFO" doc:name="Logger" doc:id="53cc273f-4429-47f0-8b28-db397a02b050" message="Error while deleting Queue. Moving on to next queue"/>
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</foreach>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="ddc85e47-7e30-456c-ad2d-d97070a1f206" message="No Clean up required"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="71599af7-421f-4460-a459-fb58fb536a71" message="Creating queues in target environment"/>
+		<foreach doc:name="For Each" doc:id="be83e6d5-6530-4dbc-8779-6f48dc725acd" collection="vars.finalTargetQNames">
+			<logger level="INFO" doc:name="Logger" doc:id="7f72c99f-941c-495b-89ba-8cce2a79de30" message="Creating #[payload]"/>
+			<try doc:name="Try" doc:id="dfcc55d4-d119-4cad-ac3a-807770f73f49" >
+				<http:request method="PUT" doc:name="Creating queue" doc:id="7688fa23-e379-480d-b12e-61ba1ff05b35" url="${anypoint.amqOpURL}">
+					<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.accessToken
+}]]]></http:headers>
+					<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.orgId,
+	"envid" : vars.env,
+	"region" : vars.region,
+	"qid" : payload.queueId
+}]]]></http:uri-params>
+			</http:request>
+				<logger level="INFO" doc:name="Logger" doc:id="1b84a031-9121-48e7-9abc-8838d21d615c" message="#[payload.queueId] Created" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="907aea7a-cc36-4eef-897a-9e0c15295727" >
+						<logger level="INFO" doc:name="Logger" doc:id="b90f2dd8-18c5-4b17-a7df-286f66dfdbbc" message="Error while creating #[payload.queueId]"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="04b6b4dd-47a5-4d88-85bf-e6f1fce20736" message="Migration Complete"/>
+	</flow>
+
+
+
+
+
+
+
+</mule>

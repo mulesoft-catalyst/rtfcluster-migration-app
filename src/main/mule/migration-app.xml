@@ -118,6 +118,7 @@ output application/json
     </flow>
     <flow name="post:\migrate\queue:application\json:migration-app-config">
         <logger level="INFO" message="post:\migrate\queue:application\json:migration-app-config" />
+		<flow-ref doc:name="migrate-mqFlow" doc:id="b673232c-bbe3-4b99-8d2e-44949fdae4fb" name="migrate-mqFlow"/>
     </flow>
     <flow name="post:\migrate\rtf:application\json:migration-app-config">
 		<flow-ref doc:name="rtf-migrate-flow" doc:id="703c73a2-2c30-41cb-a61a-93f1cd23c227" name="rtf-migrate-flow"/>

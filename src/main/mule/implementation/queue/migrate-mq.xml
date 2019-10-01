@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<flow name="migrate-mqFlow" doc:id="dff7449c-f876-4546-b134-2e7ecd73475f" >
+		<flow-ref doc:name="set-vars-subflow" doc:id="f820ed0d-83f7-4ffd-9ade-82da0f130a74" name="set-vars-subflow" />
+		<set-variable value="#[vars.sourceEnvId]" doc:name="Set source env" doc:id="fbc44ab3-c764-448f-88a3-71e14caf0b26" variableName="env"/>
+		<flow-ref doc:name="get-q-list-subflow" doc:id="a9712893-24e0-4a8f-bd25-f7b2af04abde" name="get-q-list-subflow" target="sourceQList" targetValue="#[payload]"/>
+		<set-variable value="#[vars.targetEnvId]" doc:name="Set target env" doc:id="5b44b2cb-ae59-4d60-8a57-2f27c1319cc6" variableName="env"/>
+		<flow-ref doc:name="get-q-list-subflow" doc:id="60ec33e9-a953-4b0f-89d7-1317996fc999" name="get-q-list-subflow" target="targetQList" targetValue="#[payload]"/>
+		<flow-ref doc:name="prepare-migration-data" doc:id="a719b6a0-8a02-4067-9791-a10bcdb338d3" name="prepare-migration-data"/>
+		<ee:transform doc:name="Transform Message" doc:id="757469d8-024a-4c75-92b3-cdbbf86ad0c2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "SUCCESS",
+	messgae: "Migration request submitted successfully"
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="payloadForQueue" ><![CDATA[%dw 2.0
+output application/json
+
+
+fun getNormalQueues(data) = data filter($.deadLetterQueueId == null)
+fun getQueuesWithDLQ(data) = data filter($.deadLetterQueueId != null)
+
+
+
+---
+{
+	finalTargetQNames: vars.finalTargetQNames,
+	targetQList:  getQueuesWithDLQ(vars.targetQList) ++ getNormalQueues(vars.targetQList),
+	region: vars.region,
+	env: vars.targetEnvId,
+	orgId: vars.orgId,
+	cleanTarget: vars.cleanTarget,
+	accessToken: vars.accessToken
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<vm:publish doc:name="Publish" doc:id="3e4cdc00-77c9-4b7e-b138-4ee071515a2d" config-ref="VM_Config_appList" queueName="queueListQueue">
+			<vm:content ><![CDATA[#[vars.payloadForQueue]]]></vm:content>
+		</vm:publish>
+	</flow>
+	
+	
+	<sub-flow name="lookup-profile-subflow" doc:id="b47c804a-ae4e-4f68-946a-510c6554e46c" >
+		<http:request method="GET" doc:name="GET API Profile" doc:id="111587d8-8550-4c9e-805c-aa2d5f8b911c" url="${anypoint.apiProfilePath}">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : p('anypoint.source.envId'),
+	"X-ANYPNT-ORG-ID" : p('anypoint.source.orgId'),
+	"Authorization" : vars.accessToken
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : p('anypoint.source.orgId'),
+	"envid" : p('anypoint.source.envId')
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Setup environment vars" doc:id="7f7966aa-9e9c-431f-9a3f-6f79c0fcc067">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="orgId"><![CDATA[payload.organization.id]]></ee:set-variable>
+				<ee:set-variable variableName="orgName"><![CDATA[payload.organization.name]]></ee:set-variable>
+				<ee:set-variable variableName="envList"><![CDATA[output application/json
+---
+payload.organization.environments map((env, envIdx) -> {
+	(env.name): env.id
+}) reduce($$ ++ $)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="set-vars-subflow" doc:id="79c9ec0c-bfa4-4be2-95ee-54468afd96ff" >
+		<ee:transform doc:name="Setting vars" doc:id="cd2a3761-51a4-485f-81a2-da67fdcdfcdf">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="sourceEnvName"><![CDATA[attributes.headers."anypoint-env-source"]]></ee:set-variable>
+				<ee:set-variable variableName="destEnvName"><![CDATA[attributes.headers."anypoint-env-target"]]></ee:set-variable>
+				<ee:set-variable variableName="originalPayload"><![CDATA[payload]]></ee:set-variable>
+				<ee:set-variable variableName="region"><![CDATA[attributes.headers."region"]]></ee:set-variable>
+				<ee:set-variable variableName="cleanTarget"><![CDATA[payload.cleanTargetEnv]]></ee:set-variable>
+				<ee:set-variable variableName="changeQNames"><![CDATA[payload.renameQueueatTarget]]></ee:set-variable>
+				<ee:set-variable variableName="sourcePattern"><![CDATA[payload.sourceNamePattern]]></ee:set-variable>
+				<ee:set-variable variableName="destPattern"><![CDATA[payload.targetNamePattern]]></ee:set-variable>
+				<ee:set-variable variableName="skipTestQueues" ><![CDATA[payload.skipTestQueues]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="get-access-token-subflow" doc:id="c80abe3a-6fcf-4257-ba72-60adeafc04ba" name="get-access-token-subflow" target="accessToken" targetValue="#[payload.access_token]"/>
+		<flow-ref doc:name="lookup-profile-subflow" doc:id="1632ca26-f081-4e35-94f4-0c6cfb9a322a" name="lookup-profile-subflow"/>
+		<ee:transform doc:name="Get EnvID" doc:id="4147a111-290a-420d-93bb-e338d9162e85" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="sourceEnvId" ><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+fun getEnv(data) = if(vars.envList[data] == null)
+						fail(data ++ " Environment is not available")
+				   else
+				   		vars.envList[data]
+
+---
+getEnv(vars.sourceEnvName)]]></ee:set-variable>
+				<ee:set-variable variableName="targetEnvId" ><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+fun getEnv(data) = if(vars.envList[data] == null)
+						fail(data ++ " Environment is not available")
+				   else
+				   		vars.envList[data]
+
+---
+getEnv(vars.destEnvName)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="get-q-list-subflow" doc:id="1ad75864-b7e4-4ecf-a79b-b80f92f96662" >
+		<http:request method="GET" doc:name="Get queue list" doc:id="a5c751c6-fad0-4fb4-a317-32ff1f08b2f2" url="${anypoint.amqList}">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.accessToken
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.orgId,
+	"envid" : vars.env,
+	"region" : vars.region
+}]]]></http:uri-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="0eb9745e-0f86-4182-bba2-0fe9c9f0b3b2" message="#[payload]" />
+		<ee:transform doc:name="Transform Message" doc:id="3c112a6f-a19a-4c6a-9be4-7b5094971d3b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[payload filter($."type" == "queue")]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="prepare-migration-data" doc:id="c52fedea-d06e-4762-b8ee-a5f98ae19147" >
+		<choice doc:name="Choice" doc:id="142fd474-ae80-402f-bbfa-8b6f6557a8f1" >
+			<when expression="#[vars.skipTestQueues == true]">
+				<ee:transform doc:name="Transform Message" doc:id="28bb3a6f-f86d-4f9c-acfb-41bf707c0b2e" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="sourceQList" ><![CDATA[output application/json
+var filterQueue = vars.sourceQList filter($.queueId contains(vars.originalPayload.testQueueNamePattern))
+---
+
+
+vars.sourceQList -- filterQueue]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="32354f91-e5ce-4f7d-af82-431e3baf8070" message="Test queues will not be excluded"/>
+			</otherwise>
+		</choice>
+		<choice doc:name="Check if Q names need to changed" doc:id="da8325ba-f109-49d4-8756-d554f87f3287" >
+			<when expression='#[vars.changeQNames == true]'>
+				<ee:transform doc:name="Transform Message" doc:id="5fef349f-256b-449b-904c-306630e7a55d" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+var tempVar = vars.sourceQList 
+fun replaceData(data,id,fixedVar) = 
+	if(data.deadLetterQueueId != null)
+		(data -- ["deadLetterQueueId"] ++ {"deadLetterQueueId": fixedVar[id].deadLetterQueueId replace vars.sourcePattern with vars.destPattern})
+	else
+		data
+---
+vars.sourceQList map((qData, dataIdx) -> {
+	(replaceData(qData, dataIdx,tempVar) -- ["queueId"] ++ {"queueId": tempVar[dataIdx].queueId replace vars.sourcePattern with vars.destPattern }
+	)
+})]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="cd8d1f74-8ce3-485b-a28d-506e9c2a33ba" message="Source and Destination Queue names remains as they are"/>
+				<ee:transform doc:name="Transform Message" doc:id="a92e503d-dca0-4bb5-9553-ac774da0f0f3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[vars.sourceQList]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<choice doc:name="Check if target is being cleaned" doc:id="6750ee85-0bb0-4158-95ab-3337b99346f1" >
+			<when expression='vars.cleanTarget == true'>
+				<logger level="INFO" doc:name="Logger" doc:id="ec54b503-f277-483b-be50-a691a2c8fa63" message="Target will be cleaned"/>
+				<ee:transform doc:name="Transform Message" doc:id="db1db9ff-f6eb-4d66-9d82-b794567e610d" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="finalTargetQNames" ><![CDATA[payload orderBy ($.deadLetterQueueId default "")]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="d4ce9737-19c3-4606-b2e3-b4f154cb3ad3" >
+					<ee:message >
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="finalTargetQNames" ><![CDATA[%dw 2.0
+output application/json
+---
+(payload -- vars.targetQList) orderBy ($.deadLetterQueueId default "")]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	
+</mule>

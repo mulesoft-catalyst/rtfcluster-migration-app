@@ -16,6 +16,7 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 	<vm:config name="VM_Config_appList" doc:name="VM Config" doc:id="d4c4315d-09a3-4584-b8a4-e45f1d804769" >
 		<vm:queues >
 			<vm:queue queueName="appListQueue" queueType="PERSISTENT" maxOutstandingMessages="100" />
+			<vm:queue queueName="queueListQueue" queueType="PERSISTENT" maxOutstandingMessages="100" />
 		</vm:queues>
 	</vm:config>
 	<apikit:config outboundHeadersMapName="outboundHeadersMapName" httpStatusVarName="httpStatus" doc:name="Router" doc:id="7790b8fa-a8ff-4805-a3e0-5dcf896d1869" name="migration-app-config" raml="api/migration-app.raml" />

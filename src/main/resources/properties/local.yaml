@@ -4,11 +4,13 @@ http:
   path: "/deploy"
   
 anypoint:
-  user.name: "mainul_apac"
+  user.name: "mainul"
   apiProfilePath: "https://anypoint.mulesoft.com/accounts/api/profile"
   listAppPath: "https://anypoint.mulesoft.com/hybrid/api/v2/organizations/{orgid}/environments/{envid}/deployments"
   deploymentPath: "https://anypoint.mulesoft.com/hybrid/api/v2/organizations/{orgid}/environments/{envid}/deployments"
   appDetailsPath: "https://anypoint.mulesoft.com/hybrid/api/v2/organizations/{orgid}/environments/{envid}/deployments/{appid}"
+  amqList: "https://anypoint.mulesoft.com/mq/admin/api/v1/organizations/{orgid}/environments/{envid}/regions/{region}/destinations?inclusion=MINIMAL"
+  amqOpURL: "https://anypoint.mulesoft.com/mq/admin/api/v1/organizations/{orgid}/environments/{envid}/regions/{region}/destinations/queues/{qid}"
   source:
     envId: "7093c241-93d4-4b60-aea2-72446abfd7b9"
     orgId: "3f0b8342-a74a-4d37-afe6-5f26fde6babe"

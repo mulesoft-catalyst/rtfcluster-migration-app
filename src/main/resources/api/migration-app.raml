@@ -44,6 +44,8 @@ traits:
 /migrate/queue:
   post:
     is: [commonHeaders]
+    headers:
+      region: string
     body:
       application/json:
         type: queueMigrationDetails
