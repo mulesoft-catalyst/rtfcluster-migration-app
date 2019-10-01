@@ -294,7 +294,10 @@ output application/json
 	sourceRTF: vars.sourceRTF,
 	targetRTF: vars.destRTF,
 	accessToken: vars.accessToken,
-	desiredStatus: vars.originalPayload.desiredStatus
+	desiredStatus: vars.originalPayload.desiredStatus,
+	renameApps: vars.renameApps,
+	sourceNamePattern: vars.originalPayload.sourceNamePattern default "",
+	targetNamePattern: vars.originalPayload.targetNamePattern default ""
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>

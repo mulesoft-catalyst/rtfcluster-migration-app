@@ -37,7 +37,7 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
 output application/json
 ---
 vars.appDetails ++ [{
-	name: payload.name,
+	name: if(vars.renameApps) payload.name replace vars.sourceNamePattern with vars.targetNamePattern else payload.name,
 	target: {
 		provider: payload.target.provider,
 		targetId: vars.originalPayload.targetRTF,
@@ -195,6 +195,9 @@ payload]]></ee:set-variable>
 				<ee:set-variable variableName="sourceRTF" ><![CDATA[payload.sourceRTF]]></ee:set-variable>
 				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
 				<ee:set-variable variableName="deploymentResultList" ><![CDATA[[]]]></ee:set-variable>
+				<ee:set-variable variableName="renameApps" ><![CDATA[payload.renameApps]]></ee:set-variable>
+				<ee:set-variable variableName="sourceNamePattern" ><![CDATA[payload.sourceNamePattern]]></ee:set-variable>
+				<ee:set-variable variableName="targetNamePattern" ><![CDATA[payload.targetNamePattern]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<logger level="INFO" doc:name="Logger" doc:id="46611b3f-f1e0-4952-9148-fa9c9f8974e9" message="Stopping all the apps in #[vars.originalPayload.sourceRTF]"/>
