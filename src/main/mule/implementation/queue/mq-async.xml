@@ -20,7 +20,10 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 				<ee:set-variable variableName="region" ><![CDATA[payload.region]]></ee:set-variable>
 				<ee:set-variable variableName="env" ><![CDATA[payload.env]]></ee:set-variable>
 				<ee:set-variable variableName="originalPayload" ><![CDATA[payload]]></ee:set-variable>
-				<ee:set-variable variableName="cleanTarget" ><![CDATA[payload.cleanTarget]]></ee:set-variable>
+				<ee:set-variable variableName="cleanTarget" ><![CDATA[if (sizeOf(payload.targetQList) == 0)
+	false
+else
+	payload.cleanTarget]]></ee:set-variable>
 				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
