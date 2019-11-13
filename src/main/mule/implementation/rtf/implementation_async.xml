@@ -193,13 +193,13 @@ payload]]></ee:set-variable>
 				<ee:set-variable variableName="sourceEnvId" ><![CDATA[payload.sourceEnv]]></ee:set-variable>
 				<ee:set-variable variableName="orgId" ><![CDATA[payload.orgId]]></ee:set-variable>
 				<ee:set-variable variableName="sourceRTF" ><![CDATA[payload.sourceRTF]]></ee:set-variable>
-				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
 				<ee:set-variable variableName="deploymentResultList" ><![CDATA[[]]]></ee:set-variable>
 				<ee:set-variable variableName="renameApps" ><![CDATA[payload.renameApps]]></ee:set-variable>
 				<ee:set-variable variableName="sourceNamePattern" ><![CDATA[payload.sourceNamePattern]]></ee:set-variable>
 				<ee:set-variable variableName="targetNamePattern" ><![CDATA[payload.targetNamePattern]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<flow-ref doc:name="get-access-token-subflow" doc:id="3909d2fe-df49-4f47-b4cf-6a80f6c57302" name="get-access-token-subflow" target="accessToken" targetValue='#["Bearer " ++ payload.access_token]'/>
 		<logger level="INFO" doc:name="Logger" doc:id="46611b3f-f1e0-4952-9148-fa9c9f8974e9" message="Stopping all the apps in #[vars.originalPayload.sourceRTF]"/>
 		<flow-ref doc:name="removing-app-from-sourcertf-subflow" doc:id="92a73e73-804b-4b83-acda-103e8fbdd4c1" name="removing-app-from-sourcertf-subflow" />
 		<flow-ref doc:name="check-sourcertf-app-status-subflow" doc:id="642a9f78-c24c-43e9-a55f-3739c825a4bb" name="check-source-app-status-subflow"/>

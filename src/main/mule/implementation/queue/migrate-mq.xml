@@ -49,7 +49,6 @@ fun getQueuesWithDLQ(data) = data filter($.deadLetterQueueId != null)
 		</ee:transform>
 				<vm:publish doc:name="Publish" doc:id="3e4cdc00-77c9-4b7e-b138-4ee071515a2d" config-ref="VM_Config_appList" queueName="queueListQueue">
 			<vm:content><![CDATA[#[vars.payloadForQueue]]]></vm:content>
-					<vm:content ><![CDATA[#[vars.payloadForQueue]]]></vm:content>
 		</vm:publish>
 			</when>
 			<otherwise >

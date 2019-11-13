@@ -27,6 +27,7 @@ else
 				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<flow-ref doc:name="get-access-token-subflow" doc:id="5c8b278c-a25d-4746-b8d4-2b928d7c2693" name="get-access-token-subflow" target="accessToken" targetValue='#[payload.access_token]'/>
 		<choice doc:name="Choice" doc:id="3a0c6dec-7c20-498e-8b9f-1ea6293af320" >
 			<when expression='vars.cleanTarget == true'>
 				<logger level="INFO" doc:name="Logger" doc:id="a5cb57ae-c575-430e-a4da-a4f22a4fe179" message="Deleting queues from target"/>
