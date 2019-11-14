@@ -6,56 +6,7 @@
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
-	<sub-flow name="deploy-all-app-subflow" doc:id="f263e653-4c99-4e1f-a64d-5f66e1db0d13" >
-		<foreach doc:name="For Each" doc:id="081db2d3-e198-4a98-b012-bd77b317632b" collection="payload">
-			<try doc:name="Try" doc:id="047354e1-5f26-41b5-8fd1-6bb81a1ee413">
-				<http:request method="POST" doc:name="Deploy APP" doc:id="22f509e9-e319-4d8c-9c22-fa204c3a5f96" url="${anypoint.deploymentPath}">
-					<http:headers><![CDATA[#[output application/java
----
-{
-	"Content-Type" : "application/json",
-	"X-ANYPNT-ENV-ID" : vars.envId,
-	"X-ANYPNT-ORG-ID" : vars.orgId,
-	"Authorization" : vars.accessToken
-}]]]></http:headers>
-					<http:uri-params><![CDATA[#[output application/java
----
-{
-	"orgid" : vars.orgId,
-	"envid" : vars.envId
-}]]]></http:uri-params>
-				</http:request>
-				<error-handler>
-					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="47ff57d8-7c5a-45ef-9a30-9108dc1d6fb9">
-						<logger level="INFO" doc:name="Logger" doc:id="f968bf09-6cc8-4607-ad4e-2ceda2898101" message="Some Error occured" />
-						<ee:transform doc:name="Set variables" doc:id="76f6e3fd-a2a5-4068-b29e-c0c2ed5ff2b4">
-			<ee:message />
-			<ee:variables>
-				<ee:set-variable variableName="deploymentResultList"><![CDATA[output application/java
----
-vars.deploymentResultList ++ [{
-	"status": "Failure",
-	"errorMsg": error
-}]]]></ee:set-variable>
-			</ee:variables>
-		</ee:transform>
-					</on-error-continue>
-				</error-handler>
-			</try>
-			<ee:transform doc:name="Set variables" doc:id="fc24af52-ed4a-41da-bc07-db2ea0157a2c">
-				<ee:message>
-				</ee:message>
-				<ee:variables>
-					<ee:set-variable variableName="deploymentResultList"><![CDATA[output application/java
----
-vars.deploymentResultList ++ [{
-	"status": "Success",
-	"serverMsg": payload
-}]]]></ee:set-variable>
-				</ee:variables>
-			</ee:transform>
-		</foreach>
-	</sub-flow>
+	
 	<sub-flow name="get-app-list-subflow" doc:id="a7cf1deb-ad58-486e-9cc2-9d09d635cd67" >
 		<http:request method="GET" doc:name="Get app list" doc:id="f03c52c6-8b84-4cd2-8e73-be8f79a499a0" url="${anypoint.listAppPath}">
 			<http:headers><![CDATA[#[output application/java

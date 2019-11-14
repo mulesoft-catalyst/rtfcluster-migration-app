@@ -7,7 +7,7 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
-	<sub-flow name="removing-app-from-sourcertf-subflow" doc:id="e237f4c9-81a6-4d87-9555-78df6902aca9" >
+	<sub-flow name="get-app-details-from-sourcertf-subflow" doc:id="e237f4c9-81a6-4d87-9555-78df6902aca9" >
 		<foreach doc:name="For Each entry in vars.originalPayload.appList" doc:id="8be1cf0a-d8c5-4f3c-8312-14a142a1c53e" collection="vars.originalPayload.appList">
 			<set-variable value="#[payload.appId]" doc:name="Set Variable" doc:id="c7e28c19-55dc-4616-b3c9-4329718d3597" variableName="appId"/>
 			<try doc:name="Try" doc:id="03d75acf-b5fc-4d28-b74c-27c5b5a97267">
@@ -121,9 +121,9 @@ output application/json
 }]]]></http:uri-params>
 						</http:request>
 					</when>
-					<otherwise >
+					<when expression='#[vars.originalPayload.desiredStatus == "DELETED"]'>
 						<http:request method="DELETE" doc:name="Detele app" doc:id="8ec9f660-0371-4e0f-a22c-fea0727d8ef8" url="${anypoint.appDetailsPath}">
-							<http:headers ><![CDATA[#[output application/java
+							<http:headers><![CDATA[#[output application/java
 ---
 {
 	"Content-Type" : "application/json",
@@ -138,7 +138,25 @@ output application/json
 	"envid" : vars.originalPayload.sourceEnv,
 	"appid" : vars.appId
 }]]]></http:uri-params>
+							<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.originalPayload.sourceEnv,
+	"X-ANYPNT-ORG-ID" : vars.originalPayload.orgId,
+	"Authorization" : vars.originalPayload.accessToken
+}]]]></http:headers>
+							<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.originalPayload.orgId,
+	"envid" : vars.originalPayload.sourceEnv,
+	"appid" : vars.appId
+}]]]></http:uri-params>
 						</http:request>
+					</when>
+					<otherwise>
+						<logger level="INFO" doc:name="Logger" doc:id="901b7dbb-ac11-4e80-8bb9-398c910a2dcf" />
 					</otherwise>
 				</choice>
 				<error-handler>
@@ -201,17 +219,77 @@ payload]]></ee:set-variable>
 		</ee:transform>
 		<flow-ref doc:name="get-access-token-subflow" doc:id="3909d2fe-df49-4f47-b4cf-6a80f6c57302" name="get-access-token-subflow" target="accessToken" targetValue='#["Bearer " ++ payload.access_token]'/>
 		<logger level="INFO" doc:name="Logger" doc:id="46611b3f-f1e0-4952-9148-fa9c9f8974e9" message="Stopping all the apps in #[vars.originalPayload.sourceRTF]"/>
-		<flow-ref doc:name="removing-app-from-sourcertf-subflow" doc:id="92a73e73-804b-4b83-acda-103e8fbdd4c1" name="removing-app-from-sourcertf-subflow" />
-		<flow-ref doc:name="check-sourcertf-app-status-subflow" doc:id="642a9f78-c24c-43e9-a55f-3739c825a4bb" name="check-source-app-status-subflow"/>
+		<flow-ref doc:name="get-app-details-from-sourcertf-subflow" doc:id="92a73e73-804b-4b83-acda-103e8fbdd4c1" name="get-app-details-from-sourcertf-subflow" />
+		<choice doc:name="Choice" doc:id="b76a451d-0c81-49b1-9e94-3e2ef00bddb3" >
+			<when expression='#[vars.originalPayload.desiredStatus == "KEEP"]'>
+				<logger level="INFO" doc:name="Logger" doc:id="4ed84c07-f50c-4bd7-96fc-76301f2fd04a" />
+			</when>
+			<otherwise >
+				<flow-ref doc:name="check-sourcertf-app-status-subflow" doc:id="642a9f78-c24c-43e9-a55f-3739c825a4bb" name="check-source-app-status-subflow" />
+			</otherwise>
+		</choice>
 		<ee:transform doc:name="Transform Message" doc:id="3215abae-e8fb-42ba-ae76-333639713e01" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[vars.appDetails]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
-				<ee:set-variable variableName="envId" ><![CDATA[vars.sourceEnvId]]></ee:set-variable>
+				<ee:set-variable variableName="envId" ><![CDATA[vars.originalPayload.targetEnv]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="deploy-all-app-subflow" doc:id="6783c188-5db8-4cc9-8bfe-24a14c9668cb" name="deploy-all-app-subflow"/>
 		<logger level="INFO" doc:name="Logger" doc:id="9d0db8f5-a034-4018-a46e-419abdda60e9" message="Migration complete"/>
 	</flow>
+	
+	<sub-flow name="deploy-all-app-subflow" doc:id="0188691d-9ac8-4334-9396-6cfca2062ddc" >
+		<foreach doc:name="For Each" doc:id="b7ce6798-191a-46fa-80d3-65d085fee1ef" collection="payload">
+			<try doc:name="Try" doc:id="e727ad40-9913-4eb6-9cac-24129cbe8519">
+				<http:request method="POST" doc:name="Deploy APP" doc:id="64959b81-78fb-4dda-afda-cf87cb25eeec" url="${anypoint.deploymentPath}">
+					<http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json",
+	"X-ANYPNT-ENV-ID" : vars.envId,
+	"X-ANYPNT-ORG-ID" : vars.orgId,
+	"Authorization" : vars.accessToken
+}]]]></http:headers>
+					<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"orgid" : vars.orgId,
+	"envid" : vars.envId
+}]]]></http:uri-params>
+				</http:request>
+				<error-handler>
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b10831ba-39a3-4a68-9e2d-69ad9fcaa606">
+						<logger level="INFO" doc:name="Logger" doc:id="a6dd9132-e43c-41be-ac92-f82b0321f715" message="Some Error occured" />
+						<ee:transform doc:name="Set variables" doc:id="ed435d6d-1b0a-47d3-86aa-afaf475cee74">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="deploymentResultList"><![CDATA[output application/java
+---
+vars.deploymentResultList ++ [{
+	"status": "Failure",
+	"errorMsg": error
+}]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+					</on-error-continue>
+				</error-handler>
+			</try>
+			<ee:transform doc:name="Set variables" doc:id="2665076f-ab13-4ddd-9f3b-8c63336b4a8e">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="deploymentResultList"><![CDATA[output application/java
+---
+vars.deploymentResultList ++ [{
+	"status": "Success",
+	"serverMsg": payload
+}]]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+	</sub-flow>
+	
+	
 </mule>

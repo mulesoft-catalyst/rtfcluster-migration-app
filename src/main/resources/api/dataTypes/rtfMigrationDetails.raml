@@ -4,16 +4,21 @@ properties:
   sourceRTF:
     type: string
     description: |
-      Source RTF environment
+      Source RTF cluster
 
+  targetENV?:
+    type: string
+    description: |
+      Target Environment
+      
   targetRTF:
     type: string
     description: |
-      Target RTF Environment
+      Target RTF cluster
   
   desiredStatus:
     type: string
-    enum: ["STOPPED", "DELETED"]
+    enum: ["STOPPED", "DELETED", "KEEP"]
     description: |
       Desired status of the applications in source RTF
 
