@@ -35,9 +35,10 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
 				<ee:variables>
 					<ee:set-variable variableName="appDetails"><![CDATA[%dw 2.0
 output application/json
+var newName = if(vars.renameApps) payload.name replace vars.sourceNamePattern with vars.targetNamePattern else payload.name
 ---
 vars.appDetails ++ [{
-	name: if(vars.renameApps) payload.name replace vars.sourceNamePattern with vars.targetNamePattern else payload.name,
+	name: newName,
 	target: {
 		provider: payload.target.provider,
 		targetId: vars.originalPayload.targetRTF,
@@ -55,7 +56,7 @@ vars.appDetails ++ [{
 			clustered: payload.target.deploymentSettings.clustered,
 			http: {
 				inbound: {
-					publicUrl: payload.target.deploymentSettings.http.inbound.publicUrl
+					publicUrl: if(vars.replaceUrl) vars.targetUrl replace "{appName}" with newName else payload.target.deploymentSettings.http.inbound.publicUrl
 				}
 			},
 			runtimeVersion: payload.target.deploymentSettings.runtimeVersion,
@@ -138,21 +139,7 @@ output application/json
 	"envid" : vars.originalPayload.sourceEnv,
 	"appid" : vars.appId
 }]]]></http:uri-params>
-							<http:headers ><![CDATA[#[output application/java
----
-{
-	"Content-Type" : "application/json",
-	"X-ANYPNT-ENV-ID" : vars.originalPayload.sourceEnv,
-	"X-ANYPNT-ORG-ID" : vars.originalPayload.orgId,
-	"Authorization" : vars.originalPayload.accessToken
-}]]]></http:headers>
-							<http:uri-params ><![CDATA[#[output application/java
----
-{
-	"orgid" : vars.originalPayload.orgId,
-	"envid" : vars.originalPayload.sourceEnv,
-	"appid" : vars.appId
-}]]]></http:uri-params>
+
 						</http:request>
 					</when>
 					<otherwise>
@@ -215,9 +202,11 @@ payload]]></ee:set-variable>
 				<ee:set-variable variableName="renameApps" ><![CDATA[payload.renameApps]]></ee:set-variable>
 				<ee:set-variable variableName="sourceNamePattern" ><![CDATA[payload.sourceNamePattern]]></ee:set-variable>
 				<ee:set-variable variableName="targetNamePattern" ><![CDATA[payload.targetNamePattern]]></ee:set-variable>
+				<ee:set-variable variableName="accessToken" ><![CDATA[payload.accessToken]]></ee:set-variable>
+				<ee:set-variable variableName="targetUrl" ><![CDATA[payload.targetUrl]]></ee:set-variable>
+				<ee:set-variable variableName="replaceUrl" ><![CDATA[payload.replaceUrl]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<flow-ref doc:name="get-access-token-subflow" doc:id="3909d2fe-df49-4f47-b4cf-6a80f6c57302" name="get-access-token-subflow" target="accessToken" targetValue='#["Bearer " ++ payload.access_token]'/>
 		<logger level="INFO" doc:name="Logger" doc:id="46611b3f-f1e0-4952-9148-fa9c9f8974e9" message="Stopping all the apps in #[vars.originalPayload.sourceRTF]"/>
 		<flow-ref doc:name="get-app-details-from-sourcertf-subflow" doc:id="92a73e73-804b-4b83-acda-103e8fbdd4c1" name="get-app-details-from-sourcertf-subflow" />
 		<choice doc:name="Choice" doc:id="b76a451d-0c81-49b1-9e94-3e2ef00bddb3" >

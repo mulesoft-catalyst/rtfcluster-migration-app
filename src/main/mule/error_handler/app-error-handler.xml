@@ -17,7 +17,32 @@ output application/json
 	erroMsg: "One or more environment not found for the user"
 }]]></ee:set-payload>
 				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+				</ee:variables>
 			</ee:transform>
 		</on-error-continue>
+		
+		<on-error-continue enableNotifications="true" logException="false" doc:name="On Error Continue" doc:id="f154843f-c20d-4647-8733-997f0730a59c" type="APP:NOT_FOUND">
+			<logger level="INFO" doc:name="Logger" doc:id="0d60997b-1128-473c-8131-6ed0e7ef1caf" message="Environment is not available for the user"/>
+			<ee:transform doc:name="Output payload" doc:id="08c5f607-0a36-4c82-94b8-1e01c75ac170" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "Failure",
+	erroMsg: "No app found the the source cluster"
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-continue>
+		
 	</error-handler>
+	
+	
+	
 </mule>

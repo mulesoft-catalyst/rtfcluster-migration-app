@@ -7,6 +7,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
 	
+	<ee:object-store-caching-strategy name="Caching_Strategy" doc:name="Caching Strategy" doc:id="7d616cb7-6371-4be8-b22a-4d691fae741d" keyGenerationExpression='#["accessToken"]' objectStore="Object_store_token_cache" />
 	<sub-flow name="get-app-list-subflow" doc:id="a7cf1deb-ad58-486e-9cc2-9d09d635cd67" >
 		<http:request method="GET" doc:name="Get app list" doc:id="f03c52c6-8b84-4cd2-8e73-be8f79a499a0" url="${anypoint.listAppPath}">
 			<http:headers><![CDATA[#[output application/java
@@ -70,7 +71,8 @@ payload.organization.environments map((env, envIdx) -> {
 	</sub-flow>
 	<sub-flow name="get-access-token-subflow" doc:id="87daff08-bca2-42b5-8ab6-608c17f1ef38" >
 		<logger level="INFO" doc:name="Start Get token" doc:id="952f310b-c09b-4828-ae06-285a27481901" message="Logging into Anypoint for token" />
-		<ee:transform doc:name="Transform Message" doc:id="ffb18b27-725b-4c10-be25-28cbfb733da2">
+		<ee:cache doc:name="Cache" doc:id="171637f3-a6b2-4e3a-ac3e-a84a34cdb222" cachingStrategy-ref="Caching_Strategy">
+			<ee:transform doc:name="Transform Message" doc:id="ffb18b27-725b-4c10-be25-28cbfb733da2">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -81,8 +83,9 @@ output application/json
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<http:request method="POST" doc:name="Get Anypoint access token" doc:id="81c51e6d-5ea4-4723-9f61-f7e2ea75e8ed" url="https://anypoint.mulesoft.com/accounts/login" sendCorrelationId="ALWAYS">
+			<http:request method="POST" doc:name="Get Anypoint access token" doc:id="81c51e6d-5ea4-4723-9f61-f7e2ea75e8ed" url="https://anypoint.mulesoft.com/accounts/login" sendCorrelationId="ALWAYS">
 		</http:request>
+		</ee:cache>
 	</sub-flow>
 	<flow name="application-bulk-deployFlow" doc:id="ba37dda3-024d-4b37-9668-fc1baaf4296a" >
 		<http:listener doc:name="Listener" doc:id="b4758964-bfdd-472a-9187-e732ca95db2a" config-ref="HTTP_Listener_config" path="${http.path}"/>
@@ -248,7 +251,9 @@ output application/json
 	desiredStatus: vars.originalPayload.desiredStatus,
 	renameApps: vars.renameApps,
 	sourceNamePattern: vars.originalPayload.sourceNamePattern default "",
-	targetNamePattern: vars.originalPayload.targetNamePattern default ""
+	targetNamePattern: vars.originalPayload.targetNamePattern default "",
+	replaceUrl: vars.originalPayload.replaceUrl default false,
+	targetUrl: vars.originalPayload.targetUrl default ""
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
@@ -265,5 +270,6 @@ output application/json
 				</ee:transform>
 			</otherwise>
 		</choice>
+		<error-handler ref="app-error-handler" />
 	</flow>
 </mule>
