@@ -116,18 +116,8 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="post:\migrate\queue:application\json:migration-app-config">
-        <logger level="INFO" message="post:\migrate\queue:application\json:migration-app-config" />
-		<flow-ref doc:name="migrate-mqFlow" doc:id="b673232c-bbe3-4b99-8d2e-44949fdae4fb" name="migrate-mqFlow"/>
-    </flow>
     <flow name="post:\migrate\rtf:application\json:migration-app-config">
 		<flow-ref doc:name="rtf-migrate-flow" doc:id="703c73a2-2c30-41cb-a61a-93f1cd23c227" name="rtf-migrate-flow"/>
     </flow>
-    <flow name="post:\migration\alerts:application\json:migration-app-config">
-        <logger level="INFO" message="post:\migration\alerts:application\json:migration-app-config" />
-    </flow>
-    <flow name="post:\rtf\deploy:application\json:migration-app-config">
-        <logger level="INFO" message="post:\rtf\deploy:application\json:migration-app-config" />
-		<flow-ref doc:name="application-bulk-deployFlow" doc:id="3c8470b8-e22f-41fd-8aed-a7d771e9fb1e" name="application-bulk-deployFlow" />
-    </flow>
+    
 </mule>
