@@ -79,7 +79,7 @@ output application/json
 ---
 {
    "username" : p('anypoint.user.name'),
-   "password" : p('anypoint.user.pass')
+   "password" : p('secure::anypoint.user.pass')
 }]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
